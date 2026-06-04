@@ -62,6 +62,8 @@ textarea{resize:vertical;min-height:100px;line-height:1.6;}
 .radio-option{display:none;}
 .radio-label{padding:7px 14px;border:1.5px solid var(--border);border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap;}
 .radio-label:hover{border-color:var(--orange);}
+#prev-no:checked~label[for="prev-no"]{background:#E8F5E9;border-color:#388E3C;color:#1B5E20;}
+#prev-yes:checked~label[for="prev-yes"]{background:#FFF3E0;border-color:#F57C00;color:#E65100;}
 #p-v-high:checked~label[for="p-v-high"]{background:#FDEDED;border-color:#C0392B;color:#7B241C;}
 #p-high:checked~label[for="p-high"]{background:#FEF5E7;border-color:#E67E22;color:#784212;}
 #p-mid:checked~label[for="p-mid"]{background:#FAEEDA;border-color:#C37C16;color:#613D08;}
@@ -245,10 +247,23 @@ textarea{resize:vertical;min-height:100px;line-height:1.6;}
           <span class="err-msg" id="err-detail">กรุณากรอกรายละเอียด</span>
         </div>
       </div>
-      <div class="form-row single">
+      <div class="form-row">
         <div class="form-group">
-          <label>สถานที่เกิดเหตุ</label>
-          <input type="text" id="location" placeholder="ที่อยู่หรือชื่อสถานที่">
+          <label>พื้นที่<span class="req">*</span></label>
+          <select id="area">
+            <option value="">— เลือกพื้นที่ —</option>
+            <option>เมืองภูเก็ต</option>
+            <option>เกาะแก้ว</option>
+            <option>ตลาดเหนือ</option>
+            <option>ตลาดใหญ่</option>
+            <option>รัษฎา</option>
+          </select>
+          <span class="err-msg" id="err-area">กรุณาเลือกพื้นที่</span>
+        </div>
+        <div class="form-group">
+          <label>สถานที่เกิดเหตุ (ที่อยู่/จุดสังเกต)<span class="req">*</span></label>
+          <input type="text" id="location" placeholder="เช่น หน้าตลาดสด ถ.ดีบุก">
+          <span class="err-msg" id="err-location">กรุณากรอกสถานที่เกิดเหตุ</span>
         </div>
       </div>
       <div class="form-row single">
@@ -266,10 +281,10 @@ textarea{resize:vertical;min-height:100px;line-height:1.6;}
         <div class="form-group">
           <label>ท่านเคยแจ้งหน่วยงานใดมาก่อนหรือไม่<span class="req">*</span></label>
           <div class="radio-group" style="gap:10px;">
-            <input type="radio" name="prev" id="prev-no" class="radio-option" value="ยังไม่เคยแจ้ง" checked>
-            <label class="radio-label" for="prev-no" onclick="togglePrevBox(false)">✗ ยังไม่เคยแจ้ง</label>
-            <input type="radio" name="prev" id="prev-yes" class="radio-option" value="เคยแจ้งแล้ว">
-            <label class="radio-label" for="prev-yes" onclick="togglePrevBox(true)">✓ เคยแจ้งแล้ว</label>
+            <input type="radio" name="prev" id="prev-no" class="radio-option" value="ยังไม่เคยแจ้ง" checked onchange="togglePrevBox(false)">
+            <label class="radio-label" for="prev-no">✗ ยังไม่เคยแจ้ง</label>
+            <input type="radio" name="prev" id="prev-yes" class="radio-option" value="เคยแจ้งแล้ว" onchange="togglePrevBox(true)">
+            <label class="radio-label" for="prev-yes">✓ เคยแจ้งแล้ว</label>
           </div>
           <div class="prev-report-box" id="prev-report-box">
             <label style="display:block;margin-bottom:6px;">หน่วยงานที่เคยแจ้งและผลการดำเนินการ<span class="req">*</span></label>
@@ -292,6 +307,9 @@ textarea{resize:vertical;min-height:100px;line-height:1.6;}
       <span class="upload-hint" id="upload-count"></span>
     </div>
 
+    <div style="background:#FFF8E1;border:1px solid #FFD54F;border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:12px;font-size:12px;color:#5D4037;line-height:1.7;">
+      📊 <strong>หมายเหตุ:</strong> เมื่อกดส่ง ข้อมูลจะถูกบันทึกและส่งอีเมลแจ้งเตือนไปยังทีมงานอัตโนมัติ
+    </div>
     <button class="btn-submit" id="submit-btn" onclick="submitForm()">✓ ส่งเรื่องร้องเรียน</button>
   </div>
 </div>
@@ -425,6 +443,8 @@ function submitForm() {
     {id:'category',err:'err-category'},
     {id:'subject', err:'err-subject'},
     {id:'detail',  err:'err-detail'},
+    {id:'area',    err:'err-area'},
+    {id:'location',err:'err-location'},
   ];
   let ok = true;
   fields.forEach(f => {
@@ -475,6 +495,7 @@ function submitForm() {
       priority:   priority,
       subject:    document.getElementById('subject').value.trim(),
       detail:     document.getElementById('detail').value.trim(),
+      area:       document.getElementById('area').value,
       location:   document.getElementById('location').value.trim(),
       mapurl:     document.getElementById('mapurl').value.trim(),
       prevStatus: prevStatus,
@@ -511,6 +532,7 @@ function resetForm() {
   });
   document.querySelectorAll('.err').forEach(el=>el.classList.remove('err'));
   document.querySelectorAll('.err-msg.show').forEach(el=>el.classList.remove('show'));
+  document.getElementById('area').value='';
   document.getElementById('map-preview').style.display='none';
   document.getElementById('p-mid').checked = true;
   document.getElementById('priority-desc').textContent = '📋 ปานกลาง — ควรแก้ไขเร็วๆ นี้';
