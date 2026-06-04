@@ -153,7 +153,7 @@ textarea{resize:vertical;min-height:100px;line-height:1.6;}
 <div class="tabs">
   <button class="tab-btn active" onclick="setTab(0)">📋 แจ้งปัญหา</button>
   <button class="tab-btn" onclick="setTab(1)">🔍 ติดตามสถานะ</button>
-  <button class="tab-btn" onclick="setTab(2)">📊 แดชบอร์ด</button>
+  <button class="tab-btn" onclick="setTab(2)">📊 สรุปเรื่องร้องเรียน</button>
 </div>
 
 <!-- ══════════════════════════════════════════════ -->
@@ -330,23 +330,44 @@ textarea{resize:vertical;min-height:100px;line-height:1.6;}
 </div>
 
 <!-- ══════════════════════════════════════════════ -->
-<!--  TAB 2 : แดชบอร์ด                            -->
+<!--  TAB 2 : สรุปเรื่องร้องเรียน                 -->
 <!-- ══════════════════════════════════════════════ -->
 <div class="container" id="tab-2" style="display:none;">
-  <div class="card">
-    <div class="card-title">📊 แดชบอร์ด (เจ้าหน้าที่)</div>
-    <div class="dash-card">
-      <div style="font-size:36px;">🔐</div>
-      <div>
-        <div style="font-weight:700;font-size:15px;">เข้าสู่ระบบจัดการ</div>
-        <p>แดชบอร์ดสำหรับเจ้าหน้าที่ต้องเข้าผ่าน Google Apps Script<br>
-        เพื่อความปลอดภัยของข้อมูล</p>
-        <a href="https://script.google.com/macros/s/AKfycbzR8L1i1mY37Tn_kYE5Ql8E6beOy78bvO1QesLCrr2pl5qZ2uv_GZTZttRAeLRmdo1a/exec?page=dashboard" target="_blank" class="btn-primary" style="display:inline-block;margin-top:12px;text-decoration:none;">
-          🔗 เปิด Dashboard
-        </a>
-      </div>
+
+  <!-- stat cards -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;" id="stat-row">
+    <div class="stat-card" style="background:#FFF0E6;border:1px solid #FFC9A0;border-radius:10px;padding:14px;text-align:center;">
+      <div style="font-size:28px;font-weight:700;color:var(--orange-dk);" id="stat-total">—</div>
+      <div style="font-size:12px;color:var(--text2);margin-top:4px;">เรื่องร้องเรียนทั้งหมด</div>
+    </div>
+    <div class="stat-card" style="background:#E8F5E9;border:1px solid #A5D6A7;border-radius:10px;padding:14px;text-align:center;">
+      <div style="font-size:28px;font-weight:700;color:#2E7D32;" id="stat-done">—</div>
+      <div style="font-size:12px;color:var(--text2);margin-top:4px;">ดำเนินการเสร็จสิ้นแล้ว</div>
+    </div>
+    <div class="stat-card" style="background:#FFF8E1;border:1px solid #FFE082;border-radius:10px;padding:14px;text-align:center;">
+      <div style="font-size:28px;font-weight:700;color:#F57F17;" id="stat-wip">—</div>
+      <div style="font-size:12px;color:var(--text2);margin-top:4px;">กำลังดำเนินการ</div>
+    </div>
+    <div class="stat-card" style="background:#FCEBEB;border:1px solid #EF9A9A;border-radius:10px;padding:14px;text-align:center;">
+      <div style="font-size:28px;font-weight:700;color:#C62828;" id="stat-recv">—</div>
+      <div style="font-size:12px;color:var(--text2);margin-top:4px;">รอรับเรื่อง</div>
     </div>
   </div>
+
+  <!-- รายการล่าสุด -->
+  <div class="card">
+    <div class="card-title">📋 รายการเรื่องร้องเรียนล่าสุด</div>
+    <div id="pub-list"><div class="spinner"></div></div>
+  </div>
+
+  <!-- ปุ่มสำหรับเจ้าหน้าที่ -->
+  <div class="card" style="text-align:center;">
+    <div style="font-size:13px;color:var(--text2);margin-bottom:12px;">🔐 เจ้าหน้าที่: เข้าระบบเพื่อแก้ไขและอัปเดตสถานะ</div>
+    <a href="https://script.google.com/macros/s/AKfycbzR8L1i1mY37Tn_kYE5Ql8E6beOy78bvO1QesLCrr2pl5qZ2uv_GZTZttRAeLRmdo1a/exec?page=dashboard" target="_blank" class="btn-primary" style="display:inline-block;text-decoration:none;padding:10px 28px;">
+      🔗 เข้าระบบจัดการ (เจ้าหน้าที่)
+    </a>
+  </div>
+
 </div>
 
 <script>
@@ -360,6 +381,7 @@ function setTab(n) {
     document.getElementById('tab-'+i).style.display = i===n?'block':'none';
     document.querySelectorAll('.tab-btn')[i].classList.toggle('active', i===n);
   });
+  if (n === 2) loadPublicSummary();
 }
 
 // ── Map preview ──
@@ -547,6 +569,51 @@ function resetForm() {
 function goTrack() {
   setTab(1);
   window.scrollTo(0,0);
+}
+
+// ── Load public summary (tab 2) ──
+function loadPublicSummary() {
+  const statTotal = document.getElementById('stat-total');
+  const statDone  = document.getElementById('stat-done');
+  const statWip   = document.getElementById('stat-wip');
+  const statRecv  = document.getElementById('stat-recv');
+  const listEl    = document.getElementById('pub-list');
+  if (!listEl) return;
+
+  fetch(GAS_URL + '?action=getSummary')
+    .then(r => r.json())
+    .then(d => {
+      if (statTotal) statTotal.textContent = d.total ?? '—';
+      if (statDone)  statDone.textContent  = d.done  ?? '—';
+      if (statWip)   statWip.textContent   = d.inProgress ?? '—';
+      if (statRecv)  statRecv.textContent  = d.received ?? '—';
+    })
+    .catch(() => {});
+
+  fetch(GAS_URL + '?action=getPublic')
+    .then(r => r.json())
+    .then(rows => {
+      if (!rows || !rows.length) {
+        listEl.innerHTML = '<p style="color:var(--text2);font-size:13px;text-align:center;padding:16px;">ยังไม่มีเรื่องร้องเรียน</p>';
+        return;
+      }
+      const statusClass = {'รับเรื่องแล้ว':'b-recv','กำลังดำเนินการ':'b-wip','เสร็จสิ้นแล้ว':'b-done'};
+      listEl.innerHTML = rows.slice(0,20).map(r => `
+        <div style="padding:10px 0;border-bottom:1px solid var(--border);font-size:13px;">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+            <div style="flex:1;">
+              <span style="color:var(--text2);font-size:11px;">${r.id} · ${r.date}</span><br>
+              <strong>${r.subject || '—'}</strong>
+              <span style="color:var(--text2);"> · ${r.category || ''}</span>
+            </div>
+            <span class="badge ${statusClass[r.status]||'b-recv'}" style="white-space:nowrap;">${r.status}</span>
+          </div>
+          ${r.area ? `<div style="font-size:11px;color:var(--text2);margin-top:3px;">📍 ${r.area}${r.location?' · '+r.location:''}</div>` : ''}
+        </div>`).join('');
+    })
+    .catch(() => {
+      listEl.innerHTML = '<p style="color:var(--text2);font-size:13px;text-align:center;padding:16px;">ไม่สามารถโหลดข้อมูลได้ในขณะนี้</p>';
+    });
 }
 
 // ── Track status ──
