@@ -319,7 +319,18 @@
     fetch(GAS_URL + '?action=getAll&pw=' + encodeURIComponent(adminToken))
       .then(r => r.json())
       .then(function(rows) {
-        allData = rows || [];
+        // GAS อาจส่งกลับเป็น object หรือ array ตรวจสอบก่อน
+        if (Array.isArray(rows)) {
+          allData = rows;
+        } else if (rows && Array.isArray(rows.data)) {
+          allData = rows.data;
+        } else if (rows && rows.error) {
+          document.getElementById('table-container').innerHTML =
+            '<div class="empty"><p>❌ ' + rows.error + ' — กรุณาตรวจสอบรหัสผ่าน</p></div>';
+          return;
+        } else {
+          allData = [];
+        }
         renderTable();
         loadSummary();
       })
@@ -564,6 +575,7 @@
       document.getElementById('admin-badge').classList.remove('off');
       document.getElementById('readonly-notice').classList.remove('show');
       showToast('เข้าสู่ระบบ Admin สำเร็จ', 'success');
+      loadData(); // โหลดข้อมูลหลัง login สำเร็จ
       renderTable();
     } else {
       document.getElementById('admin-err').style.display = 'block';
@@ -593,9 +605,9 @@
 
   // ── Init ──
   window.onload = function() {
-    loadData();
-    loadHeaders();
-    // เริ่มต้นเป็น read-only (ผู้ร้อง)
+    // ไม่โหลดข้อมูลตอนเริ่ม — รอให้ login ก่อน
+    // แต่โหลด summary สาธารณะได้เลย
+    loadSummary();
     document.getElementById('readonly-notice').classList.add('show');
   };
 </script>
