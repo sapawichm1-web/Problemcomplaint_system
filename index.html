@@ -379,6 +379,24 @@ textarea{resize:vertical;min-height:100px;line-height:1.6;}
 <script>
 // ── GAS URL ──────────────────────────────────────────────
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbzR8L1i1mY37Tn_kYE5Ql8E6beOy78bvO1QesLCrr2pl5qZ2uv_GZTZttRAeLRmdo1a/exec';
+
+// ── JSONP helper ──
+function jsonp(url, callback) {
+  const cbName = 'cb_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+  const script = document.createElement('script');
+  window[cbName] = function(data) {
+    delete window[cbName];
+    document.body.removeChild(script);
+    callback(null, data);
+  };
+  script.onerror = function() {
+    delete window[cbName];
+    if (document.body.contains(script)) document.body.removeChild(script);
+    callback(new Error('failed'));
+  };
+  script.src = url + (url.includes('?') ? '&' : '?') + 'callback=' + cbName;
+  document.body.appendChild(script);
+}
 // ─────────────────────────────────────────────────────────
 
 // ── Tab switching ──
@@ -597,40 +615,34 @@ function loadPublicSummary() {
   const listEl    = document.getElementById('pub-list');
   if (!listEl) return;
 
-  fetch(GAS_URL + '?action=getSummary')
-    .then(r => r.json())
-    .then(d => {
+  jsonp(GAS_URL + '?action=getSummary', function(err, d) {
+    if (!err && d) {
       if (statTotal) statTotal.textContent = d.total ?? '—';
       if (statDone)  statDone.textContent  = d.done  ?? '—';
       if (statWip)   statWip.textContent   = d.inProgress ?? '—';
       if (statRecv)  statRecv.textContent  = d.received ?? '—';
-    })
-    .catch(() => {});
+    }
+  });
 
-  fetch(GAS_URL + '?action=getPublic')
-    .then(r => r.json())
-    .then(rows => {
-      if (!rows || !rows.length) {
-        listEl.innerHTML = '<p style="color:var(--text2);font-size:13px;text-align:center;padding:16px;">ยังไม่มีเรื่องร้องเรียน</p>';
-        return;
-      }
-      const statusClass = {'รับเรื่องแล้ว':'b-recv','กำลังดำเนินการ':'b-wip','เสร็จสิ้นแล้ว':'b-done'};
-      listEl.innerHTML = rows.slice(0,20).map(r => `
-        <div style="padding:10px 0;border-bottom:1px solid var(--border);font-size:13px;">
-          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
-            <div style="flex:1;">
-              <span style="color:var(--text2);font-size:11px;">${r.id} · ${r.date}</span><br>
-              <strong>${r.subject || '—'}</strong>
-              <span style="color:var(--text2);"> · ${r.category || ''}</span>
-            </div>
-            <span class="badge ${statusClass[r.status]||'b-recv'}" style="white-space:nowrap;">${r.status}</span>
+  jsonp(GAS_URL + '?action=getPublic', function(err, rows) {
+    if (err || !rows || !rows.length) {
+      listEl.innerHTML = '<p style="color:var(--text2);font-size:13px;text-align:center;padding:16px;">' + (err ? 'ไม่สามารถโหลดข้อมูลได้ในขณะนี้' : 'ยังไม่มีเรื่องร้องเรียน') + '</p>';
+      return;
+    }
+    const statusClass = {'รับเรื่องแล้ว':'b-recv','กำลังดำเนินการ':'b-wip','เสร็จสิ้นแล้ว':'b-done'};
+    listEl.innerHTML = rows.slice(0,20).map(r => `
+      <div style="padding:10px 0;border-bottom:1px solid var(--border);font-size:13px;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+          <div style="flex:1;">
+            <span style="color:var(--text2);font-size:11px;">${r.id} · ${r.date}</span><br>
+            <strong>${r.subject || '—'}</strong>
+            <span style="color:var(--text2);"> · ${r.category || ''}</span>
           </div>
-          ${r.area ? `<div style="font-size:11px;color:var(--text2);margin-top:3px;">📍 ${r.area}${r.location?' · '+r.location:''}</div>` : ''}
-        </div>`).join('');
-    })
-    .catch(() => {
-      listEl.innerHTML = '<p style="color:var(--text2);font-size:13px;text-align:center;padding:16px;">ไม่สามารถโหลดข้อมูลได้ในขณะนี้</p>';
-    });
+          <span class="badge ${statusClass[r.status]||'b-recv'}" style="white-space:nowrap;">${r.status}</span>
+        </div>
+        ${r.area ? `<div style="font-size:11px;color:var(--text2);margin-top:3px;">📍 ${r.area}${r.location?' · '+r.location:''}</div>` : ''}
+      </div>`).join('');
+  });
 }
 
 // ── Track status ──
@@ -642,9 +654,12 @@ function trackStatus() {
   const resultEl = document.getElementById('track-result');
   resultEl.innerHTML = '<div class="spinner"></div>';
 
-  fetch(GAS_URL + '?action=getById&id=' + encodeURIComponent(id))
-    .then(r => r.json())
-    .then(data => {
+  jsonp(GAS_URL + '?action=getById&id=' + encodeURIComponent(id), function(err, data) {
+    if (err) {
+      resultEl.innerHTML = '<p style="color:var(--red);font-size:13px;margin-top:8px">❌ ไม่สามารถเชื่อมต่อได้ กรุณาลองใหม่</p>';
+      return;
+    }
+    (function(data) {
       if (!data || !data.id) {
         resultEl.innerHTML = `<p style="color:var(--red);font-size:13px;margin-top:8px">❌ ไม่พบรหัส ${id} กรุณาตรวจสอบอีกครั้ง</p>`;
         return;
@@ -668,9 +683,8 @@ function trackStatus() {
           <div class="result-row"><span class="result-label">แผนที่</span><span class="result-val">${mapLink}</span></div>
         </div>`;
     })
-    .catch(() => {
-      resultEl.innerHTML = '<p style="color:var(--red);font-size:13px;margin-top:8px">❌ ไม่สามารถเชื่อมต่อได้ กรุณาลองใหม่อีกครั้ง</p>';
-    });
+    })(data);
+  });
 }
 </script>
 </body>
