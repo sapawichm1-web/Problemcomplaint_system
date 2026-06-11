@@ -659,31 +659,28 @@ function trackStatus() {
       resultEl.innerHTML = '<p style="color:var(--red);font-size:13px;margin-top:8px">❌ ไม่สามารถเชื่อมต่อได้ กรุณาลองใหม่</p>';
       return;
     }
-    (function(data) {
-      if (!data || !data.id) {
-        resultEl.innerHTML = `<p style="color:var(--red);font-size:13px;margin-top:8px">❌ ไม่พบรหัส ${id} กรุณาตรวจสอบอีกครั้ง</p>`;
-        return;
-      }
-      const statusClass = {
-        'รับเรื่องแล้ว':'b-recv',
-        'กำลังดำเนินการ':'b-wip',
-        'เสร็จสิ้นแล้ว':'b-done'
-      }[data.status] || 'b-recv';
-      const mapLink = data.mapurl ? `<a href="${data.mapurl}" target="_blank" style="color:var(--orange);font-weight:600">🗺️ ดูแผนที่</a>` : '—';
-      resultEl.innerHTML = `
-        <div class="result-card">
-          <div class="result-row"><span class="result-label">รหัส</span><span class="result-val">${data.id}</span></div>
-          <div class="result-row"><span class="result-label">วันที่แจ้ง</span><span class="result-val">${data.date}</span></div>
-          <div class="result-row"><span class="result-label">หัวข้อ</span><span class="result-val">${data.subject}</span></div>
-          <div class="result-row"><span class="result-label">หมวดหมู่</span><span class="result-val">${data.category}</span></div>
-          <div class="result-row"><span class="result-label">สถานะ</span><span class="result-val"><span class="badge ${statusClass}">${data.status}</span></span></div>
-          <div class="result-row"><span class="result-label">ผู้รับผิดชอบ</span><span class="result-val">${data.assignee||'ยังไม่ได้กำหนด'}</span></div>
-          <div class="result-row"><span class="result-label">ความคืบหน้า</span><span class="result-val" style="white-space:pre-wrap">${data.notes||'ยังไม่มีการอัปเดต'}</span></div>
-          <div class="result-row"><span class="result-label">อัปเดตล่าสุด</span><span class="result-val">${data.updated}</span></div>
-          <div class="result-row"><span class="result-label">แผนที่</span><span class="result-val">${mapLink}</span></div>
-        </div>`;
-    })
-    })(data);
+    if (!data || !data.id) {
+      resultEl.innerHTML = `<p style="color:var(--red);font-size:13px;margin-top:8px">❌ ไม่พบรหัส ${id} กรุณาตรวจสอบอีกครั้ง</p>`;
+      return;
+    }
+    const statusClass = {
+      'รับเรื่องแล้ว':'b-recv',
+      'กำลังดำเนินการ':'b-wip',
+      'เสร็จสิ้นแล้ว':'b-done'
+    }[data.status] || 'b-recv';
+    const mapLink = data.mapurl ? `<a href="${data.mapurl}" target="_blank" style="color:var(--orange);font-weight:600">🗺️ ดูแผนที่</a>` : '—';
+    resultEl.innerHTML = `
+      <div class="result-card">
+        <div class="result-row"><span class="result-label">รหัส</span><span class="result-val">${data.id}</span></div>
+        <div class="result-row"><span class="result-label">วันที่แจ้ง</span><span class="result-val">${data.date}</span></div>
+        <div class="result-row"><span class="result-label">หัวข้อ</span><span class="result-val">${data.subject}</span></div>
+        <div class="result-row"><span class="result-label">หมวดหมู่</span><span class="result-val">${data.category}</span></div>
+        <div class="result-row"><span class="result-label">สถานะ</span><span class="result-val"><span class="badge ${statusClass}">${data.status}</span></span></div>
+        <div class="result-row"><span class="result-label">ผู้รับผิดชอบ</span><span class="result-val">${data.assignee||'ยังไม่ได้กำหนด'}</span></div>
+        <div class="result-row"><span class="result-label">ความคืบหน้า</span><span class="result-val" style="white-space:pre-wrap">${data.notes||'ยังไม่มีการอัปเดต'}</span></div>
+        <div class="result-row"><span class="result-label">อัปเดตล่าสุด</span><span class="result-val">${data.updated}</span></div>
+        <div class="result-row"><span class="result-label">แผนที่</span><span class="result-val">${mapLink}</span></div>
+      </div>`;
   });
 }
 </script>
