@@ -177,23 +177,28 @@ textarea{resize:vertical;min-height:100px;line-height:1.6;}
   <div id="form-wrapper">
     <div class="card">
       <div class="card-title">👤 ข้อมูลผู้แจ้ง</div>
-      <div class="form-row">
+      <div class="form-row single">
         <div class="form-group">
           <label>ชื่อ-นามสกุล<span class="req">*</span></label>
           <input type="text" id="name" placeholder="ชื่อ-นามสกุล">
           <span class="err-msg" id="err-name">กรุณากรอกชื่อ</span>
         </div>
+      </div>
+      <div class="form-row">
         <div class="form-group">
-          <label>หน่วยงาน/ชุมชน/พื้นที่<span class="req">*</span></label>
-          <input type="text" id="dept" placeholder="เช่น ตลาดเหนือ, ตลาดใหญ่">
-          <span class="err-msg" id="err-dept">กรุณากรอกหน่วยงาน/พื้นที่</span>
+          <label>เบอร์โทรศัพท์<span class="req">*</span></label>
+          <input type="tel" id="phone" placeholder="เช่น 081-234-5678" inputmode="tel">
+          <span class="err-msg" id="err-phone">กรุณากรอกเบอร์โทรศัพท์</span>
+        </div>
+        <div class="form-group">
+          <label>อีเมล <span style="font-weight:400;color:var(--text2)">(ถ้ามี)</span></label>
+          <input type="email" id="email" placeholder="example@email.com" inputmode="email">
         </div>
       </div>
       <div class="form-row single">
         <div class="form-group">
-          <label>ช่องทางติดต่อกลับ<span class="req">*</span></label>
-          <input type="text" id="contact" placeholder="เบอร์โทร / Line ID / อีเมล">
-          <span class="err-msg" id="err-contact">กรุณากรอกช่องทางติดต่อ</span>
+          <label>ไลน์ไอดี <span style="font-weight:400;color:var(--text2)">(ถ้ามี)</span></label>
+          <input type="text" id="line_id" placeholder="เช่น @somchat หรือ somchat123">
         </div>
       </div>
     </div>
@@ -465,8 +470,7 @@ function submitForm() {
   // Validate required fields
   const fields = [
     {id:'name',    err:'err-name'},
-    {id:'dept',    err:'err-dept'},
-    {id:'contact', err:'err-contact'},
+    {id:'phone',   err:'err-phone'},
     {id:'category',err:'err-category'},
     {id:'subject', err:'err-subject'},
     {id:'detail',  err:'err-detail'},
@@ -516,8 +520,9 @@ function submitForm() {
     const data = {
       action:     'submit',
       name:       document.getElementById('name').value.trim(),
-      dept:       document.getElementById('dept').value.trim(),
-      contact:    document.getElementById('contact').value.trim(),
+      phone:      document.getElementById('phone').value.trim(),
+      email:      document.getElementById('email').value.trim(),
+      line_id:    document.getElementById('line_id').value.trim(),
       category:   document.getElementById('category').value,
       priority:   priority,
       subject:    document.getElementById('subject').value.trim(),
@@ -560,6 +565,8 @@ function resetForm() {
   document.querySelectorAll('.err').forEach(el=>el.classList.remove('err'));
   document.querySelectorAll('.err-msg.show').forEach(el=>el.classList.remove('show'));
   document.getElementById('area').value='';
+  document.getElementById('email').value='';
+  document.getElementById('line_id').value='';
   document.getElementById('map-preview').style.display='none';
   document.getElementById('p-mid').checked = true;
   document.getElementById('priority-desc').textContent = '📋 ปานกลาง — ควรแก้ไขเร็วๆ นี้';
