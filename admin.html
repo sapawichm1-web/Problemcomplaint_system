@@ -308,6 +308,24 @@
 
 <script>
   const GAS_URL = 'https://script.google.com/macros/s/AKfycbzR8L1i1mY37Tn_kYE5Ql8E6beOy78bvO1QesLCrr2pl5qZ2uv_GZTZttRAeLRmdo1a/exec';
+
+  // ── JSONP helper — หลีกเลี่ยง CORS บน GET requests ──
+  function jsonp(url, callback) {
+    const cbName = 'cb_' + Date.now();
+    const script = document.createElement('script');
+    window[cbName] = function(data) {
+      delete window[cbName];
+      document.body.removeChild(script);
+      callback(null, data);
+    };
+    script.onerror = function() {
+      delete window[cbName];
+      document.body.removeChild(script);
+      callback(new Error('JSONP failed'));
+    };
+    script.src = url + (url.includes('?') ? '&' : '?') + 'callback=' + cbName;
+    document.body.appendChild(script);
+  }
   let adminToken = '';
   let allData = [];
   let currentId = null;
@@ -316,41 +334,35 @@
   function loadData() {
     document.getElementById('table-container').innerHTML =
       '<div class="loading"><div><div class="spinner"></div></div><p>กำลังโหลดข้อมูล...</p></div>';
-    fetch(GAS_URL + '?action=getAll&pw=' + encodeURIComponent(adminToken))
-      .then(r => r.json())
-      .then(function(rows) {
-        // GAS อาจส่งกลับเป็น object หรือ array ตรวจสอบก่อน
-        if (Array.isArray(rows)) {
-          allData = rows;
-        } else if (rows && Array.isArray(rows.data)) {
-          allData = rows.data;
-        } else if (rows && rows.error) {
-          document.getElementById('table-container').innerHTML =
-            '<div class="empty"><p>❌ ' + rows.error + ' — กรุณาตรวจสอบรหัสผ่าน</p></div>';
-          return;
-        } else {
-          allData = [];
-        }
-        renderTable();
-        loadSummary();
-      })
-      .catch(function(e) {
+    jsonp(GAS_URL + '?action=getAll&pw=' + encodeURIComponent(adminToken), function(err, rows) {
+      if (err) {
         document.getElementById('table-container').innerHTML =
-          '<div class="empty"><p>เกิดข้อผิดพลาดในการโหลดข้อมูล: ' + e + '</p></div>';
-      });
+          '<div class="empty"><p>❌ เกิดข้อผิดพลาด: ' + err + '</p></div>';
+        return;
+      }
+      if (Array.isArray(rows)) {
+        allData = rows;
+      } else if (rows && rows.error) {
+        document.getElementById('table-container').innerHTML =
+          '<div class="empty"><p>❌ ' + rows.error + ' — กรุณาตรวจสอบรหัสผ่าน</p></div>';
+        return;
+      } else {
+        allData = [];
+      }
+      renderTable();
+      loadSummary();
+    });
   }
 
   function loadSummary() {
-    fetch(GAS_URL + '?action=getSummary')
-      .then(r => r.json())
-      .then(function(s) {
-        document.getElementById('s-total').textContent  = s.total;
-        document.getElementById('s-recv').textContent   = s.received;
-        document.getElementById('s-wip').textContent    = s.inProgress;
-        document.getElementById('s-done').textContent   = s.done;
-        document.getElementById('s-urgent').textContent = s.urgent;
-      })
-      .catch(function(){});
+    jsonp(GAS_URL + '?action=getSummary', function(err, s) {
+      if (err || !s) return;
+      document.getElementById('s-total').textContent  = s.total  || 0;
+      document.getElementById('s-recv').textContent   = s.received || 0;
+      document.getElementById('s-wip').textContent    = s.inProgress || 0;
+      document.getElementById('s-done').textContent   = s.done   || 0;
+      document.getElementById('s-urgent').textContent = s.urgent || 0;
+    });
   }
 
   // ── Render ตาราง ──
@@ -478,20 +490,16 @@
     const assignee = document.getElementById('m-assignee').value.trim();
     const note     = document.getElementById('m-note').value.trim();
 
-    fetch(GAS_URL, {
-        method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ action:'updateStatus', id:currentId, status:status, assignee:assignee, pw:adminToken })
-      })
+    const fd1 = new FormData();
+    fd1.append('payload', JSON.stringify({ action:'updateStatus', id:currentId, status:status, assignee:assignee, pw:adminToken }));
+    fetch(GAS_URL, { method:'POST', body:fd1 })
       .then(r => r.json())
       .then(function(res) {
         if (!res.success) { showToast(res.message||'เกิดข้อผิดพลาด', 'error'); return; }
         if (note) {
-          fetch(GAS_URL, {
-            method: 'POST',
-            headers: {'Content-Type':'application/json'},
-            body: JSON.stringify({ action:'addNote', id:currentId, note:note, pw:adminToken })
-          })
+          const fd2 = new FormData();
+          fd2.append('payload', JSON.stringify({ action:'addNote', id:currentId, note:note, pw:adminToken }));
+          fetch(GAS_URL, { method:'POST', body:fd2 })
           .then(r => r.json())
           .then(function() {
             showToast('บันทึกเรียบร้อยแล้ว', 'success');
